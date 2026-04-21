@@ -55,6 +55,18 @@ async function startBot(charKey) {
         // 2. RESPONSE LOGIC
         if (authorId === client.user.id) return;
 
+        // --- SPECIAL COMMANDS (Monika only) ---
+        if (charKey === 'monika' && !message.author.bot) {
+            if (message.content === '!durdur') {
+                orchestrator.setAutoTalk(false);
+                return message.reply("Tamam, grup sohbetini durdurdum. Ben söyleyene kadar kimse kendi kendine konuşmayacak.");
+            }
+            if (message.content === '!baslat') {
+                orchestrator.setAutoTalk(true);
+                return message.reply("Ehehe, kulüp odasını canlandırma vakti! Konuşmaları tekrar başlattım.");
+            }
+        }
+
         // --- A. PRIVATE CHANNEL LOGIC ---
         if (channelId === privateChannelId) {
             if (!message.author.bot) {

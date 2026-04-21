@@ -12,17 +12,22 @@ class RPOrchestrator {
         this.processedMessageIds = new Set(); // To prevent duplicate logging
         this.globalLock = false; // Global lock to prevent multiple API requests at once
         this.channelCooldowns = {}; // channelId -> lastResponseTimestamp
+        this.autoTalkActive = true; // Manual toggle for auto-talk
     }
 
     addClient(charKey, client) {
         this.clients[charKey] = client;
         
-        // When all clients are ready, kickstart the group channel if needed
-        setTimeout(() => {
-            if (Object.keys(this.clients).length === 4) {
-                this.resetAutoTalkTimer(config.channels.group);
-            }
-        }, 5000);
+        // Check if all clients are ready to kickstart the group channel
+        if (Object.keys(this.clients).length === 4) {
+            console.log("[SYSTEM] All bots connected. Stabilizing...");
+            setTimeout(() => {
+                if (this.autoTalkActive) {
+                    console.log("[SYSTEM] Auto-talk starting in group channel.");
+                    this.resetAutoTalkTimer(config.channels.group);
+                }
+            }, 5000);
+        }
     }
 
     isWorkingHours() {
@@ -62,12 +67,25 @@ class RPOrchestrator {
     }
 
     getHistoryString(channelId) {
-        return (this.histories[channelId] || []).join('\n');
+        const fullHistory = this.histories[channelId] || [];
+        let totalChars = 0;
+        const truncatedHistory = [];
+        
+        // Reverse iterate to get the most recent messages that fit within character limit
+        for (let i = fullHistory.length - 1; i >= 0; i--) {
+            const msg = fullHistory[i];
+            if (totalChars + msg.length > 5000) break; // Limit history to ~1250 tokens
+            truncatedHistory.unshift(msg);
+            totalChars += msg.length;
+        }
+        
+        return truncatedHistory.join('\n');
     }
 
     resetAutoTalkTimer(channelId) {
         if (!channelId || channelId.includes('PASTE')) return;
         if (!this.isWorkingHours()) return;
+        if (!this.autoTalkActive && channelId === config.channels.group) return;
         
         if (this.autoTalkTimeouts[channelId]) clearTimeout(this.autoTalkTimeouts[channelId]);
         
@@ -99,9 +117,11 @@ class RPOrchestrator {
         const cooldownMs = channelId === config.channels.group ? 18000 : 3000; // 18s for group, 3s for private
         if (now - lastTalk < cooldownMs) return;
 
-        // Higher rejection chance in group chat to avoid spam
-        const rejectionChance = channelId === config.channels.group ? 0.65 : 0.05;
-        if (Math.random() < rejectionChance) return;
+        // LOWER rejection chance in group chat for better flow
+        // If a bot is specifically triggered by a chain reaction, we lower it further
+        let currentRejectionChance = channelId === config.channels.group ? 0.35 : 0.05; 
+        
+        if (Math.random() < currentRejectionChance) return;
 
         this.processingBots.add(charKey);
         this.globalLock = true; // Lock the API
@@ -144,11 +164,14 @@ class RPOrchestrator {
 
             this.releaseLocks(charKey);
 
-            // Chain Reaction (Optional Follow-up)
+            // Chain Reaction (Ensure dots are connected)
             if (channelId === config.channels.group && Math.random() < config.autoReplyChance) {
                 const otherKeys = Object.keys(personalities).filter(k => k !== charKey);
                 const nextKey = otherKeys[Math.floor(Math.random() * otherKeys.length)];
-                setTimeout(() => this.queueResponse(nextKey, channelId), config.chainReactionDelay + (Math.random() * 5000));
+                
+                // Add a slightly longer delay between chain reactions to stay under RPM
+                const reactionDelay = config.chainReactionDelay + (Math.random() * 8000) + 5000;
+                setTimeout(() => this.queueResponse(nextKey, channelId), reactionDelay);
             }
         } catch (error) {
             console.error(`[ERROR] queueResponse failed for ${charKey}:`, error.message);
@@ -159,6 +182,17 @@ class RPOrchestrator {
     releaseLocks(charKey) {
         this.processingBots.delete(charKey);
         this.globalLock = false;
+    }
+
+    setAutoTalk(status) {
+        this.autoTalkActive = status;
+        if (status) {
+            this.resetAutoTalkTimer(config.channels.group);
+        } else {
+            if (this.autoTalkTimeouts[config.channels.group]) {
+                clearTimeout(this.autoTalkTimeouts[config.channels.group]);
+            }
+        }
     }
 }
 

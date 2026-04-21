@@ -6,10 +6,9 @@ const groq = new Groq({
 });
 
 /**
- * GEMMA 2 (9B-IT) - Perfect balance between Turkish quality and Quota efficiency.
- * Low temperature (0.4) for maximum consistency.
+ * MIXTRAL 8x7B - Middle ground between 70B and 8B. Good Turkish support.
  */
-const STABLE_MODEL = config.groq.model || "gemma2-9b-it";
+const STABLE_MODEL = config.groq.model || "mixtral-8x7b-32768";
 
 async function generateResponse(character, history, channelId, retries = 3) {
     const isGroup = channelId === config.channels.group;
@@ -18,17 +17,29 @@ async function generateResponse(character, history, channelId, retries = 3) {
         ? `ORTAM: Kulüp odasındasın. Diğer kızlarla (Monika, Sayori, Yuri, Natsuki) birliktesin. İnsanları görmezden gel, kızlara laf at.`
         : `ORTAM: Kendi odandasın. Sadece şu anki kullanıcı ile samimi ve birebir sohbet ediyorsun.`;
 
-    const systemPrompt = `SYSTEM: ${character.personality}\n\n${locationContext}\n\nKonuşma Geçmişi:\n${history}\n\nKURALLAR:\n1. %100 DOĞAL TÜRKÇE konuş. Saçma sapan veya uydurma kelimeler kullanma.\n2. Samimi bir lise dili kullan, resmiyetten kaçın.\n3. Sadece ${character.name} olarak cevap ver.`;
+    const systemPrompt = `SEN: ${character.personality}
+
+${locationContext}
+
+KONUŞMA KURALLARI (KRİTİK):
+1. **Düzgün Türkçe**: Asla devrik cümle kurma. Mantıklı, akıcı ve gramer hatası olmayan bir Türkçe kullan.
+2. **Samimiyet ve Mantık**: Karakterinin duygularını yansıt ama mantık çerçevesinden çıkma. Saçma sapan, anlamsız ifadelerden kaçın.
+3. **Etkileşim**: Gruptaki diğer karakterlerin (Monika, Sayori, Yuri, Natsuki) söylediklerine tepki ver, onlara laf at veya onlarla sohbete gir.
+4. **Kısa ve Öz**: Gereksiz yere uzatma, maksimum 2-3 cümlelik doğal cevaplar ver.
+5. **Kimlik**: Sadece ${character.name} olarak cevap ver.
+
+KONUŞMA GEÇMİŞİ:
+${history}`;
 
     try {
         const chatCompletion = await groq.chat.completions.create({
             messages: [{ role: "system", content: systemPrompt }],
             model: STABLE_MODEL,
-            temperature: 0.5, // Slightly increased for more natural flow
-            max_tokens: 300,
-            top_p: 1,
-            frequency_penalty: 0.4,
-            presence_penalty: 0.3,
+            temperature: 0.45, // Logic-favored balance
+            max_tokens: 250,
+            top_p: 0.9,
+            frequency_penalty: 0.5,
+            presence_penalty: 0.4,
         });
 
         const content = chatCompletion.choices[0]?.message?.content?.trim();
