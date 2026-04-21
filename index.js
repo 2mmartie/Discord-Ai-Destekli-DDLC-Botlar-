@@ -46,10 +46,11 @@ async function startBot(charKey) {
         const channelId = message.channelId;
         const authorId = message.author.id;
         const senderName = message.author.displayName || message.author.username;
+        const content = message.content.trim();
 
-        // 1. ADD TO HISTORY (Unified system handles de-duplication using message.id)
+        // 1. ADD TO HISTORY
         if (channelId === groupChannelId || channelId === privateChannelId) {
-            orchestrator.addMessage(channelId, senderName, message.content, message.id);
+            orchestrator.addMessage(channelId, senderName, content, message.id);
         }
 
         // 2. RESPONSE LOGIC
@@ -57,11 +58,12 @@ async function startBot(charKey) {
 
         // --- SPECIAL COMMANDS (Monika only) ---
         if (charKey === 'monika' && !message.author.bot) {
-            if (message.content === '!durdur') {
+            const cmd = content.toLowerCase();
+            if (cmd === '!durdur') {
                 orchestrator.setAutoTalk(false);
                 return message.reply("Tamam, grup sohbetini durdurdum. Ben söyleyene kadar kimse kendi kendine konuşmayacak.");
             }
-            if (message.content === '!baslat') {
+            if (cmd === '!baslat') {
                 orchestrator.setAutoTalk(true);
                 return message.reply("Ehehe, kulüp odasını canlandırma vakti! Konuşmaları tekrar başlattım.");
             }
@@ -70,7 +72,7 @@ async function startBot(charKey) {
         // --- A. PRIVATE CHANNEL LOGIC ---
         if (channelId === privateChannelId) {
             if (!message.author.bot) {
-                console.log(`[PRIVATE] ${character.name} responding to user.`);
+                console.log(`[PRIVATE] ${character.name} hears: "${content.substring(0, 20)}..."`);
                 orchestrator.queueResponse(charKey, channelId);
             }
         }
@@ -80,8 +82,8 @@ async function startBot(charKey) {
             const isOtherDoki = orchestrator.isOurBot(authorId);
             const isMentioned = message.mentions.has(client.user.id);
             
-            // If mentioned or another bot spoke, consider responding
             if (isMentioned || isOtherDoki) {
+                console.log(`[GROUP] ${character.name} triggered by ${isMentioned ? 'MENTION' : 'DOKI'}.`);
                 orchestrator.queueResponse(charKey, channelId);
             }
         }
