@@ -73,7 +73,7 @@ class RPOrchestrator {
         
         for (let i = fullHistory.length - 1; i >= 0; i--) {
             const msg = fullHistory[i];
-            if (totalChars + msg.length > 5000) break;
+            if (totalChars + msg.length > 2500) break;
             truncatedHistory.unshift(msg);
             totalChars += msg.length;
         }
