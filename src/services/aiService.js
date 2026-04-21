@@ -1,8 +1,12 @@
 const Groq = require('groq-sdk');
 const config = require('../config/config');
 
+if (!config.groq.apiKey) {
+    console.error('[AI FATAL] GROQ_API_KEY is missing! Check your environment variables.');
+}
+
 const groq = new Groq({
-    apiKey: config.groq.apiKey
+    apiKey: config.groq.apiKey || 'missing_key'
 });
 
 /**

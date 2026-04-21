@@ -13,6 +13,9 @@ class RPOrchestrator {
         this.globalLock = false; // Global lock to prevent multiple API requests at once
         this.channelCooldowns = {}; // channelId -> lastResponseTimestamp
         this.autoTalkActive = true; // Manual toggle for auto-talk
+        this.watchdogInterval = null;
+        
+        this.startWatchdog();
     }
 
     addClient(charKey, client) {
@@ -29,10 +32,43 @@ class RPOrchestrator {
         }
     }
 
-    isWorkingHours() {
+    getTurkeyHour() {
         const now = new Date();
-        const hour = now.getHours();
-        return (hour >= 9 || hour < 1);
+        // Render usually uses UTC. Turkey is UTC+3.
+        const hour = (now.getUTCHours() + 3) % 24;
+        return hour;
+    }
+
+    isWorkingHours() {
+        const hour = this.getTurkeyHour();
+        const isWorking = (hour >= 9 || hour < 1);
+        
+        // Log every 30 minutes if we are silent
+        if (!isWorking && (!this.lastStatusLog || Date.now() - this.lastStatusLog > 1800000)) {
+            console.log(`[SYSTEM] Current Turkey Hour: ${hour}. Outside working hours (09:00 - 01:00). Bot is sleeping.`);
+            this.lastStatusLog = Date.now();
+        }
+        
+        return isWorking;
+    }
+
+    startWatchdog() {
+        if (this.watchdogInterval) clearInterval(this.watchdogInterval);
+        
+        console.log("[SYSTEM] Watchdog started. Checking working hours every 10 minutes.");
+        
+        this.watchdogInterval = setInterval(() => {
+            const hour = this.getTurkeyHour();
+            const isWorking = this.isWorkingHours();
+            
+            if (isWorking && this.autoTalkActive) {
+                const channelId = config.channels.group;
+                if (!this.autoTalkTimeouts[channelId]) {
+                    console.log(`[WATCHDOG] Working hours active (Hour: ${hour}). Resuming auto-talk...`);
+                    this.resetAutoTalkTimer(channelId, true);
+                }
+            }
+        }, 600000); // 10 minutes
     }
 
     isOurBot(userId) {
