@@ -30,7 +30,7 @@ async function startBot(charKey) {
 
     const client = new Client({ intents });
 
-    client.once('ready', () => {
+    client.once('clientReady', () => {
         console.log(`[CONNECTED] ${character.name} Ready (ID: ${client.user.id})`);
         orchestrator.addClient(charKey, client);
     });
@@ -103,8 +103,18 @@ app.get('/', (req, res) => {
     res.send('DDLC Multi-Bot RP System (Location Aware) is running!');
 });
 
-app.listen(config.port, () => {
-    console.log(`[SERVER] Health check server listening on port ${config.port}`);
+app.listen(config.port, '0.0.0.0', () => {
+    console.log(`[SERVER] Health check server listening on port ${config.port} (Host: 0.0.0.0)`);
 });
+
+// --- Render Self-Ping (To stay awake) ---
+if (process.env.RENDER) {
+    setInterval(() => {
+        const http = require('http');
+        console.log(`[HEARTBEAT] Keeping process alive...`);
+        http.get(`http://localhost:${config.port}`, (res) => {}).on('error', () => {});
+    }, 300000); // 5 minutes
+}
+// ----------------------------------------
 
 console.log("DDLC Multi-Bot RP System Initialization Started...");

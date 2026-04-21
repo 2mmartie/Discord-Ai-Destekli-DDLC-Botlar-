@@ -29,8 +29,9 @@ KONUŞMA KURALLARI (KRİTİK):
 1. **Düzgün Türkçe**: Asla devrik cümle kurma. Mantıklı, akıcı ve gramer hatası olmayan bir Türkçe kullan.
 2. **Samimiyet ve Mantık**: Karakterinin duygularını yansıt ama her zaman mantıklı ve tutarlı kal. Konuşma geçmişine sıkı sıkıya bağlı kal, önceki konuları unutma ve konudan sapma.
 3. **Etkileşim**: Gruptaki diğer karakterlerin (Monika, Sayori, Yuri, Natsuki) söylediklerine net ve odaklanmış tepkiler ver. Onlara doğrudan hitap et veya onlarla nazikçe tartış.
-4. **Kısa ve Öz**: Gereksiz yere uzatma, maksimum 2-3 cümlelik doğal cevaplar ver.
-5. **Kimlik**: Sadece ${character.name} olarak cevap ver.`;
+4. **Çok Kısa ve Net**: Sadece 1, en fazla 2 kısa cümle kur. Gereksiz detaya girme, konuyu uzatma.
+5. **Tekrardan Kaçın**: Önceki mesajlarında söylediklerini veya benzer ifadeleri sürekli tekrarlama. Her seferinde taze bir tepki ver.
+6. **Kimlik**: Sadece ${character.name} olarak cevap ver.`;
 
     try {
         console.log(`[AI] Requesting response for ${character.name} (${STABLE_MODEL})...`);
@@ -38,14 +39,14 @@ KONUŞMA KURALLARI (KRİTİK):
         const chatCompletion = await groq.chat.completions.create({
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: `Son Konuşma Geçmişi:\n${history}\n\n${character.name}, doğal bir cevap ver.` }
+                { role: "user", content: `Son Konuşma Geçmişi:\n${history}\n\n${character.name}, hikayeye uygun ama ÇOK KISA ve öz bir cevap ver.` }
             ],
             model: STABLE_MODEL,
-            temperature: 0.45,
-            max_tokens: 250,
+            temperature: 0.7,
+            max_tokens: 100,
             top_p: 0.9,
-            frequency_penalty: 0.5,
-            presence_penalty: 0.4,
+            frequency_penalty: 1.0,
+            presence_penalty: 0.7,
         });
 
         console.log(`[AI] Response received for ${character.name}.`);

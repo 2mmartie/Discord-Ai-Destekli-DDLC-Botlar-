@@ -18,6 +18,23 @@ class RPOrchestrator {
         this.startWatchdog();
     }
 
+    cleanResponse(text) {
+        if (!text) return "";
+        // Birbirinin aynısı olan satırları/paragrafları temizler
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const uniqueLines = [];
+        const seen = new Set();
+        
+        for (const line of lines) {
+            // Küçük harf karşılaştırması ile benzerliği yakalar
+            if (!seen.has(line.toLowerCase())) {
+                uniqueLines.push(line);
+                seen.add(line.toLowerCase());
+            }
+        }
+        return uniqueLines.join('\n');
+    }
+
     addClient(charKey, client) {
         this.clients[charKey] = client;
         console.log(`[SYSTEM] Client registered: ${charKey}`);
@@ -40,16 +57,7 @@ class RPOrchestrator {
     }
 
     isWorkingHours() {
-        const hour = this.getTurkeyHour();
-        const isWorking = (hour >= 9 || hour < 1);
-        
-        // Log every 30 minutes if we are silent
-        if (!isWorking && (!this.lastStatusLog || Date.now() - this.lastStatusLog > 1800000)) {
-            console.log(`[SYSTEM] Current Turkey Hour: ${hour}. Outside working hours (09:00 - 01:00). Bot is sleeping.`);
-            this.lastStatusLog = Date.now();
-        }
-        
-        return isWorking;
+        return true; // Kullanıcı isteği: 24 saat kesintisiz çalışma
     }
 
     startWatchdog() {
@@ -197,7 +205,8 @@ class RPOrchestrator {
             await new Promise(resolve => setTimeout(resolve, Math.random() * 2000));
             await channel.sendTyping();
             
-            const response = await generateResponse(character, this.getHistoryString(channelId), channelId);
+            const responseRaw = await generateResponse(character, this.getHistoryString(channelId), channelId);
+            const response = this.cleanResponse(responseRaw);
             
             // Update cooldown and release lock so other bots can start their AI processing
             this.channelCooldowns[channelId] = Date.now();
